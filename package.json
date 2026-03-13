@@ -1,0 +1,21 @@
+{
+  "name": "livetyping-server",
+  "version": "1.0.0",
+  "description": "LiveTyping 온라인 중계 서버",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.2",
+    "tsx": "^4.16.0",
+    "@types/node": "^20.14.8",
+    "@types/cors": "^2.8.17"
+  }
+}
