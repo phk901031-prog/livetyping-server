@@ -144,6 +144,57 @@ io.on('connection', socket => {
     callback({ ok: true, role })
   })
 
+  // ─── 방 재입장 (브라우저 새로고침/재접속 시) ──────────────────────────
+  // 기존 방 코드와 역할을 가지고 다시 들어오는 경우
+  socket.on('room:rejoin', (
+    code: string,
+    nickname: string,
+    prevRole: UserRole,
+    callback: (res: { ok: boolean; error?: string; role?: UserRole }) => void
+  ) => {
+    const room = getRoom(code)
+    if (!room) {
+      callback({ ok: false, error: '방이 만료되었습니다.' })
+      return
+    }
+
+    // 같은 역할이 비어 있으면 같은 역할로 복귀, 아니면 빈 역할 배정
+    const roles = Array.from(room.members.values())
+    let role: UserRole
+    if (!roles.includes(prevRole)) {
+      role = prevRole  // 이전 역할 자리가 비어 있음 → 복귀
+    } else {
+      // 이전 역할이 이미 차 있으면 다른 역할 배정
+      role = prevRole === '속기사1' ? '속기사2' : '속기사1'
+      if (roles.includes(role)) {
+        callback({ ok: false, error: '방이 가득 찼습니다.' })
+        return
+      }
+    }
+
+    const displayName = nickname.trim() || role
+    room.members.set(socket.id, role)
+    room.nicknames[role] = displayName
+    room.lastActivity = Date.now()
+    socket.join(code)
+    currentRoom = code
+    currentRole = role
+
+    // 현재 상태 전달
+    socket.emit('state:sync', {
+      segments: room.segments,
+      nextIndex: room.nextIndex,
+      displayOrder: room.displayOrder,
+      role,
+      nicknames: room.nicknames,
+      mediaState: room.mediaState
+    })
+
+    socket.to(code).emit('member:joined', { role, nickname: displayName })
+    console.log(`[room] ${code} 재입장 → ${displayName}(${role}) (${socket.id})`)
+    callback({ ok: true, role })
+  })
+
   // ─── 새 세그먼트 ──────────────────────────────────────────────────────
   socket.on('segment:new', (
     { user, content }: { user: UserRole; content: string },
